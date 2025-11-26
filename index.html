@@ -6,6 +6,7 @@
 <title>AOT Fuel Terminal</title>
 <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 <div class="terminal-container">
 <h1 class="terminal-header">AOT Self-Service</h1>
@@ -14,11 +15,6 @@
 <button onclick="showHome()">🏠 Home</button>
 <button onclick="showRegister()">➕ Register Card</button>
 </div>
-
-<div class="page-footer">
-  <p>Designed by AOTECH</p>
-</div>
-
 
 <div class="display-box" id="display-box">Welcome to AOTECH! Please Insert Card to Begin.</div>
 
@@ -46,9 +42,22 @@
 <button onclick="selectFuel('PETROL')">PETROL</button>
 <button onclick="selectFuel('DIESEL')">DIESEL</button>
 </div>
-<h3>Enter Amount (Liters):</h3>
+<h3>Enter Liters:</h3>
 <input type="number" id="desired-amount" placeholder="e.g., 25.0" step="0.1">
 <button onclick="preAuthorize()">Authorize</button>
+</div>
+
+<!-- FINAL SUMMARY POPUP -->
+<div id="summary-popup" class="popup" style="display:none;">
+    <div class="popup-content">
+        <h2>Transaction Summary</h2>
+        <p><strong>Card:</strong> <span id="summary-card"></span></p>
+        <p><strong>Fuel Type:</strong> <span id="summary-fuel"></span></p>
+        <p><strong>Total Liters:</strong> <span id="summary-liters"></span></p>
+        <p><strong>Total Cost:</strong> FRW <span id="summary-cost"></span></p>
+        <p><strong>Remaining Balance:</strong> FRW <span id="summary-balance"></span></p>
+        <button onclick="closeSummary()">Close</button>
+    </div>
 </div>
 
 <!-- DISPENSING -->
@@ -57,141 +66,192 @@
 <p>Fuel: <span id="fuel-type-display"></span> | Max L: <span id="max-liters-display"></span></p>
 <div class="fuel-pipe"><div class="pipe-liquid" id="pipe-liquid"></div></div>
 <h2>Dispensed: <span id="dispensed-volume">0.00</span>L</h2>
-<h2>Cost: $<span id="current-cost">0.00</span></h2>
+<h2>Cost: FRW<span id="current-cost">0.00</span></h2>
 <button id="start-pump-btn" onclick="startDispensing()">START PUMP</button>
 <button id="stop-pump-btn" onclick="stopDispensing()" disabled>STOP PUMP</button>
 </div>
 </div>
 
 <script>
-let selectedFuel=null,maxLiters=0,dispensed=0,dispensingInterval=0;
+let selectedFuel = null, maxLiters = 0, dispensed = 0, dispensingInterval = 0;
 
 // Display helpers
-function updateDisplay(txt){document.getElementById("display-box").innerHTML="<p>"+txt+"</p>";}
-function showHome(){
-document.getElementById("register-section").style.display="none";
-document.getElementById("card-input-area").style.display="block";
-document.getElementById("selection-area").style.display="none";
-document.getElementById("dispensing-area").style.display="none";
-updateDisplay("Welcome to AOTECH! Please Insert Card to Begin.");
+function updateDisplay(txt){
+    document.getElementById("display-box").innerHTML = "<p>" + txt + "</p>";
 }
+
+function showHome(){
+    document.getElementById("register-section").style.display="none";
+    document.getElementById("card-input-area").style.display="block";
+    document.getElementById("selection-area").style.display="none";
+    document.getElementById("dispensing-area").style.display="none";
+    updateDisplay("Welcome to AOTECH! Please Insert Card to Begin.");
+}
+
 function showRegister(){
-document.getElementById("register-section").style.display="block";
-document.getElementById("card-input-area").style.display="none";
-document.getElementById("selection-area").style.display="none";
-document.getElementById("dispensing-area").style.display="none";
-updateDisplay("Register a new card below.");
+    document.getElementById("register-section").style.display="block";
+    document.getElementById("card-input-area").style.display="none";
+    document.getElementById("selection-area").style.display="none";
+    document.getElementById("dispensing-area").style.display="none";
+    updateDisplay("Register a new card below.");
 }
 
 // === Registration ===
 function registerCard(){
-let card=document.getElementById("reg-card-number").value.trim();
-let owner=document.getElementById("reg-owner").value.trim();
-let pin=document.getElementById("reg-pin").value.trim();
-let status=document.getElementById("reg-status");
+    let card=document.getElementById("reg-card-number").value.trim();
+    let owner=document.getElementById("reg-owner").value.trim();
+    let pin=document.getElementById("reg-pin").value.trim();
+    let status=document.getElementById("reg-status");
 
-if(!card||!owner||!pin){status.textContent="❌ All fields required";status.style.color="red";return;}
+    if(!card||!owner||!pin){
+        status.textContent="❌ All fields required";
+        status.style.color="red";
+        return;
+    }
 
-fetch("api/register_card.php",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-card_number:card,
-full_name:owner,
-pin_code:pin,
-balance:0
-})
-})
-.then(r=>r.json())
-.then(data=>{
-if(data.status==="SUCCESS"){status.textContent="✅ Card Registered Successfully";status.style.color="green";}
-else{status.textContent="❌ "+(data.message||"Unknown error");status.style.color="red";}
-})
-.catch(err=>{status.textContent="❌ System Error";status.style.color="red";console.error(err);});
+    fetch("api/register_card.php",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ card_number:card, full_name:owner, pin_code:pin })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        if(data.status==="SUCCESS"){
+            status.textContent="✅ Card Registered Successfully";
+            status.style.color="green";
+        }
+        else{
+            status.textContent="❌ "+(data.message||"Unknown error");
+            status.style.color="red";
+        }
+    })
+    .catch(err=>{
+        status.textContent="❌ System Error";
+        status.style.color="red";
+        console.error(err);
+    });
 }
 
 // === Card Authorization ===
 function handleCardInsertion(){
-let card=document.getElementById("card-number").value.trim();
-let pin=document.getElementById("pin-code").value.trim();
-if(!card||!pin){updateDisplay("Enter card & PIN");return;}
+    let card=document.getElementById("card-number").value.trim();
+    let pin=document.getElementById("pin-code").value.trim();
+    if(!card||!pin){ updateDisplay("Enter card & PIN"); return; }
 
-fetch("api/authorize.php",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({card_number:card,pin_code:pin})
-})
-.then(r=>r.json())
-.then(data=>{
-if(data.status==="success"){
-updateDisplay(`Welcome ${data.data.name}. Balance: $${data.data.balance}`);
-document.getElementById("selection-area").style.display="block";
-document.getElementById("card-input-area").style.display="none";
-}else updateDisplay("❌ "+data.message);
-});
+    fetch("api/authorize.php",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({card_number:card,pin_code:pin})
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        if(data.status==="success"){
+            updateDisplay(`Welcome ${data.data.name}. Balance: FRW${data.data.balance}`);
+            document.getElementById("selection-area").style.display="block";
+            document.getElementById("card-input-area").style.display="none";
+        } else {
+            updateDisplay("❌ "+data.message);
+        }
+    });
 }
 
-// === Fuel Selection & Dispensing ===
-function selectFuel(fuel){selectedFuel=fuel;document.getElementById("fuel-type-display").innerText=fuel;}
+// === Fuel Selection ===
+function selectFuel(fuel){
+    selectedFuel = fuel;
+    document.getElementById("fuel-type-display").innerText = fuel;
+
+    document.querySelectorAll(".button-row button").forEach(btn => {
+        btn.classList.remove("active-fuel");
+    });
+
+    event.target.classList.add("active-fuel");
+}
+
 function preAuthorize(){
-let volume=parseFloat(document.getElementById("desired-amount").value);
-if(!selectedFuel||isNaN(volume)||volume<=0){updateDisplay("Select fuel & valid amount");return;}
-maxLiters=volume;
-document.getElementById("dispensing-area").style.display="block";
-document.getElementById("selection-area").style.display="none";
-document.getElementById("max-liters-display").innerText=volume;
-updateDisplay(`Ready to dispense ${volume} L of ${selectedFuel}`);
+    let volume=parseFloat(document.getElementById("desired-amount").value);
+    if(!selectedFuel || isNaN(volume) || volume <= 0){
+        updateDisplay("Select fuel & valid amount");
+        return;
+    }
+
+    maxLiters = volume;
+    document.getElementById("dispensing-area").style.display="block";
+    document.getElementById("selection-area").style.display="none";
+    document.getElementById("max-liters-display").innerText = volume;
+    updateDisplay(`Ready to dispense ${volume} L of ${selectedFuel}`);
 }
 
+// === Dispensing ===
 function startDispensing(){
-dispensed=0;
-let pipe=document.getElementById("pipe-liquid");
-let costDisplay=document.getElementById("current-cost");
-document.getElementById("start-pump-btn").disabled=true;
-document.getElementById("stop-pump-btn").disabled=false;
+    dispensed = 0;
+    let pipe=document.getElementById("pipe-liquid");
+    let costDisplay=document.getElementById("current-cost");
 
-dispensingInterval=setInterval(()=>{
-if(dispensed>=maxLiters){stopDispensing();finalizeTransaction(); return;}
-dispensed+=0.1;
-pipe.style.width=(dispensed/maxLiters*100)+"%";
-costDisplay.innerText=(dispensed*1.2).toFixed(2); // example price, you can replace with dynamic
-document.getElementById("dispensed-volume").innerText=dispensed.toFixed(2);
-},100);
+    document.getElementById("start-pump-btn").disabled=true;
+    document.getElementById("stop-pump-btn").disabled=false;
+
+    dispensingInterval=setInterval(()=>{
+        if(dispensed >= maxLiters){
+            stopDispensing();
+            finalizeTransaction();
+            return;
+        }
+        dispensed+=0.1;
+        pipe.style.width = (dispensed/maxLiters*100)+"%";
+        costDisplay.innerText = (dispensed*1800).toFixed(2);
+        document.getElementById("dispensed-volume").innerText = dispensed.toFixed(2);
+    },100);
 }
 
 function stopDispensing(){
-clearInterval(dispensingInterval);
-document.getElementById("start-pump-btn").disabled=false;
-document.getElementById("stop-pump-btn").disabled=true;
-updateDisplay("Dispensing stopped/completed");
+    clearInterval(dispensingInterval);
+    document.getElementById("start-pump-btn").disabled=false;
+    document.getElementById("stop-pump-btn").disabled=true;
+    updateDisplay("Dispensing stopped/completed");
 }
 
 // === Finalize Transaction ===
 function finalizeTransaction(){
-let card=document.getElementById("card-number").value.trim();
-let cost=parseFloat(document.getElementById("current-cost").innerText);
-let volume=parseFloat(document.getElementById("dispensed-volume").innerText);
+    let card=document.getElementById("card-number").value.trim();
+    let cost=parseFloat(document.getElementById("current-cost").innerText);
+    let volume=parseFloat(document.getElementById("dispensed-volume").innerText);
 
-fetch("api/finalize_transaction.php",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-card_number:card,
-fuel_type:selectedFuel,
-volume:volume,
-cost:cost
-})
-})
-.then(r=>r.json())
-.then(data=>{
-if(data.status==="SUCCESS"){
-updateDisplay(`Transaction Completed! Remaining Balance: $${data.remaining_balance}`);
-}else{
-updateDisplay("❌ "+data.message);
+    fetch("api/finalize_transaction.php", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({
+            card_number:card,
+            fuel_type:selectedFuel,
+            volume:volume,
+            cost:cost
+        })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+        if(data.status==="SUCCESS"){
+
+            document.getElementById("summary-card").innerText = card;
+            document.getElementById("summary-fuel").innerText = data.fuel_type;
+            document.getElementById("summary-liters").innerText = data.volume_dispensed.toFixed(2);
+            document.getElementById("summary-cost").innerText = data.final_cost.toFixed(2);
+            document.getElementById("summary-balance").innerText = data.remaining_balance.toFixed(2);
+
+            document.getElementById("summary-popup").style.display="flex";
+        }
+        else updateDisplay("❌ "+data.message);
+    })
+    .catch(err=>{
+        console.error(err);
+        updateDisplay("❌ System Error");
+    });
 }
-})
-.catch(err=>{console.error(err);updateDisplay("❌ System Error");});
+
+// === Close Popup ===
+function closeSummary(){
+    document.getElementById("summary-popup").style.display="none";
+    showHome();
 }
 </script>
+
 </body>
 </html>
