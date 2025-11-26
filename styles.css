@@ -1,0 +1,201 @@
+/* Basic Reset */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #222;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+}
+
+/* Terminal Look */
+.terminal-container {
+    background-color: #004d40;
+    border: 10px solid #111;
+    border-radius: 15px;
+    padding: 30px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.terminal-header {
+    text-align: center;
+    color: #ccff90;
+    margin-bottom: 20px;
+}
+
+/* Display Box */
+.display-box {
+    background-color: #00251a;
+    border: 3px solid #004d40;
+    padding: 20px;
+    margin-bottom: 25px;
+    min-height: 80px;
+    font-size: 1.2em;
+    color: #ccff90;
+    line-height: 1.5;
+}
+
+/* Inputs */
+input[type="text"], input[type="number"], input[type="password"] {
+    width: calc(100% - 22px);
+    padding: 10px;
+    margin: 10px 0;
+    border: 2px solid #004d40;
+    background-color: #fff;
+    color: #111;
+    font-size: 1.1em;
+    box-sizing: border-box;
+}
+
+.pin-btn {
+    width: 30%;
+    padding: 15px;
+    background-color: #00695c;
+    border: 2px solid #004d40;
+    color: #ccff90;
+    font-size: 1.4em;
+    margin: 5px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+/* Pipe */
+.fuel-pipe {
+    width: 100%;
+    height: 35px;
+    background: #ed3434;
+    border: 3px solid #00e676;
+    border-radius: 20px;
+    overflow: hidden;
+    position: relative;
+    margin: 20px 0;
+}
+
+.pipe-liquid {
+    width: 0%;
+    height: 100%;
+    background: repeating-linear-gradient(
+        -45deg,
+        #13df7d 0px,
+        #00c853 10px,
+        #00e676 20px
+    );
+    background-size: 40px 40px;
+    animation: fuelFlow 0.5s linear infinite;
+    transition: width 0.1s linear;
+}
+
+.back-btn {
+    background-color: #00695c;
+    color: #ccff90;
+    padding: 10px 20px;
+    border: 2px solid #004d40;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    margin-bottom: 20px;
+    display: block;
+    width: fit-content;
+}
+.back-btn:hover { background-color: #004d40; }
+
+.register-section {
+    margin-top: 20px;
+    padding: 15px;
+    border: 2px solid #2b8df3;
+    border-radius: 10px;
+    background: #eef6ff;
+}
+
+.register-section input {
+    width: 90%;
+    padding: 10px;
+    margin: 5px 0;
+    border-radius: 8px;
+    border: 1px solid #aaa;
+}
+
+.nav-buttons button {
+    padding: 8px 15px;
+    margin-right: 5px;
+    border-radius: 8px;
+    background: #0568d8;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+.nav-buttons button:hover { background: #004c9b; }
+
+/* Animations */
+@keyframes fuelFlow {
+    from { background-position: 0 0; }
+    to   { background-position: 40px 0; }
+}
+
+button {
+    background-color: #388e3c;
+    color: white;
+    padding: 12px 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 1em;
+    margin: 5px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+button:hover { background-color: #2e7d32; }
+button:disabled {
+    background-color: #555;
+    cursor: not-allowed;
+}
+
+.button-row {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.dispensing-area h2 {
+    color: #ccff90;
+    margin: 10px 0;
+    font-size: 1.8em;
+}
+.dispensing-area span { font-weight: bold; }
+
+.start-button { background-color: #00c853; }
+.start-button:hover { background-color: #00a044; }
+
+.stop-button { background-color: #d50000; }
+.stop-button:hover { background-color: #b70000; }
+ 
+
+* --- Terminal + pipe + buttons --- */
+body{font-family:Arial,sans-serif;background:#222;color:#fff;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;}
+.terminal-container{background:#004d40;border:10px solid #111;border-radius:15px;padding:30px;width:90%;max-width:600px;box-shadow:0 0 40px rgba(0,0,0,0.5);}
+.terminal-header{text-align:center;color:#ccff90;margin-bottom:20px;}
+.display-box{background:#00251a;border:3px solid #004d40;padding:20px;margin-bottom:25px;min-height:80px;font-size:1.2em;color:#ccff90;line-height:1.5;}
+input[type="text"],input[type="number"],input[type="password"]{width:calc(100%-22px);padding:10px;margin:10px 0;border:2px solid #004d40;background:#fff;color:#111;font-size:1.1em;box-sizing:border-box;}
+.button-row{display:flex;justify-content:space-around;margin-bottom:20px;}
+button{padding:12px 20px;margin:5px;border:none;border-radius:5px;background:#388e3c;color:#fff;cursor:pointer;transition:.3s;}
+button:hover{background:#2e7d32;}
+button:disabled{background:#555;cursor:not-allowed;}
+.fuel-pipe{width:100%;height:35px;background:#ed3434;border:3px solid #00e676;border-radius:20px;overflow:hidden;position:relative;margin:20px 0;}
+.pipe-liquid{width:0%;height:100%;background:repeating-linear-gradient(-45deg,#13df7d 0px,#00c853 10px,#00e676 20px);background-size:40px 40px;animation:fuelFlow .5s linear infinite;transition:width .1s linear;}
+@keyframes fuelFlow{from{background-position:0 0;}to{background-position:40px 0;}}
+.nav-buttons button{padding:8px 15px;margin-right:5px;border-radius:8px;background:#0568d8;color:white;}
+.nav-buttons button:hover{background:#004c9b;}
+.register-section{margin-top:20px;padding:15px;border:2px solid #2b8df3;border-radius:10px;background:#eef6ff;color:#111;}
+
+.footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9em;
+    color: #a0ffa0;
+    border-top: 1px solid #004d40;
+    padding-top: 10px;
+}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AOT Fuel Terminal</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="terminal-container">
+<h1 class="terminal-header">AOT Self-Service</h1>
+
+<div class="nav-buttons">
+<button onclick="showHome()">🏠 Home</button>
+<button onclick="showRegister()">➕ Register Card</button>
+</div>
+
+<div class="page-footer">
+  <p>Designed by AOTECH</p>
+</div>
+
+
+<div class="display-box" id="display-box">Welcome to AOTECH! Please Insert Card to Begin.</div>
+
+<!-- CARD INPUT -->
+<div id="card-input-area">
+<input type="text" id="card-number" placeholder="Card Number">
+<input type="password" id="pin-code" placeholder="PIN Code">
+<button onclick="handleCardInsertion()">Insert Card</button>
+</div>
+
+<!-- REGISTRATION -->
+<div class="register-section" id="register-section" style="display:none;">
+<h3>Register a New Card</h3>
+<input type="text" id="reg-card-number" placeholder="Card Number">
+<input type="text" id="reg-owner" placeholder="Full Name">
+<input type="password" id="reg-pin" placeholder="PIN Code">
+<button onclick="registerCard()">Register Card</button>
+<p id="reg-status"></p>
+</div>
+
+<!-- FUEL SELECTION -->
+<div id="selection-area" style="display:none;">
+<h3>Select Fuel Type:</h3>
+<div class="button-row">
+<button onclick="selectFuel('PETROL')">PETROL</button>
+<button onclick="selectFuel('DIESEL')">DIESEL</button>
+</div>
+<h3>Enter Amount (Liters):</h3>
+<input type="number" id="desired-amount" placeholder="e.g., 25.0" step="0.1">
+<button onclick="preAuthorize()">Authorize</button>
+</div>
+
+<!-- DISPENSING -->
+<div id="dispensing-area" style="display:none;">
+<p>Status: <span id="pump-status">AWAITING NOZZLE</span></p>
+<p>Fuel: <span id="fuel-type-display"></span> | Max L: <span id="max-liters-display"></span></p>
+<div class="fuel-pipe"><div class="pipe-liquid" id="pipe-liquid"></div></div>
+<h2>Dispensed: <span id="dispensed-volume">0.00</span>L</h2>
+<h2>Cost: $<span id="current-cost">0.00</span></h2>
+<button id="start-pump-btn" onclick="startDispensing()">START PUMP</button>
+<button id="stop-pump-btn" onclick="stopDispensing()" disabled>STOP PUMP</button>
+</div>
+</div>
+
+<script>
+let selectedFuel=null,maxLiters=0,dispensed=0,dispensingInterval=0;
+
+// Display helpers
+function updateDisplay(txt){document.getElementById("display-box").innerHTML="<p>"+txt+"</p>";}
+function showHome(){
+document.getElementById("register-section").style.display="none";
+document.getElementById("card-input-area").style.display="block";
+document.getElementById("selection-area").style.display="none";
+document.getElementById("dispensing-area").style.display="none";
+updateDisplay("Welcome to AOTECH! Please Insert Card to Begin.");
+}
+function showRegister(){
+document.getElementById("register-section").style.display="block";
+document.getElementById("card-input-area").style.display="none";
+document.getElementById("selection-area").style.display="none";
+document.getElementById("dispensing-area").style.display="none";
+updateDisplay("Register a new card below.");
+}
+
+// === Registration ===
+function registerCard(){
+let card=document.getElementById("reg-card-number").value.trim();
+let owner=document.getElementById("reg-owner").value.trim();
+let pin=document.getElementById("reg-pin").value.trim();
+let status=document.getElementById("reg-status");
+
+if(!card||!owner||!pin){status.textContent="❌ All fields required";status.style.color="red";return;}
+
+fetch("api/register_card.php",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+card_number:card,
+full_name:owner,
+pin_code:pin,
+balance:0
+})
+})
+.then(r=>r.json())
+.then(data=>{
+if(data.status==="SUCCESS"){status.textContent="✅ Card Registered Successfully";status.style.color="green";}
+else{status.textContent="❌ "+(data.message||"Unknown error");status.style.color="red";}
+})
+.catch(err=>{status.textContent="❌ System Error";status.style.color="red";console.error(err);});
+}
+
+// === Card Authorization ===
+function handleCardInsertion(){
+let card=document.getElementById("card-number").value.trim();
+let pin=document.getElementById("pin-code").value.trim();
+if(!card||!pin){updateDisplay("Enter card & PIN");return;}
+
+fetch("api/authorize.php",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({card_number:card,pin_code:pin})
+})
+.then(r=>r.json())
+.then(data=>{
+if(data.status==="success"){
+updateDisplay(`Welcome ${data.data.name}. Balance: $${data.data.balance}`);
+document.getElementById("selection-area").style.display="block";
+document.getElementById("card-input-area").style.display="none";
+}else updateDisplay("❌ "+data.message);
+});
+}
+
+// === Fuel Selection & Dispensing ===
+function selectFuel(fuel){selectedFuel=fuel;document.getElementById("fuel-type-display").innerText=fuel;}
+function preAuthorize(){
+let volume=parseFloat(document.getElementById("desired-amount").value);
+if(!selectedFuel||isNaN(volume)||volume<=0){updateDisplay("Select fuel & valid amount");return;}
+maxLiters=volume;
+document.getElementById("dispensing-area").style.display="block";
+document.getElementById("selection-area").style.display="none";
+document.getElementById("max-liters-display").innerText=volume;
+updateDisplay(`Ready to dispense ${volume} L of ${selectedFuel}`);
+}
+
+function startDispensing(){
+dispensed=0;
+let pipe=document.getElementById("pipe-liquid");
+let costDisplay=document.getElementById("current-cost");
+document.getElementById("start-pump-btn").disabled=true;
+document.getElementById("stop-pump-btn").disabled=false;
+
+dispensingInterval=setInterval(()=>{
+if(dispensed>=maxLiters){stopDispensing();finalizeTransaction(); return;}
+dispensed+=0.1;
+pipe.style.width=(dispensed/maxLiters*100)+"%";
+costDisplay.innerText=(dispensed*1.2).toFixed(2); // example price, you can replace with dynamic
+document.getElementById("dispensed-volume").innerText=dispensed.toFixed(2);
+},100);
+}
+
+function stopDispensing(){
+clearInterval(dispensingInterval);
+document.getElementById("start-pump-btn").disabled=false;
+document.getElementById("stop-pump-btn").disabled=true;
+updateDisplay("Dispensing stopped/completed");
+}
+
+// === Finalize Transaction ===
+function finalizeTransaction(){
+let card=document.getElementById("card-number").value.trim();
+let cost=parseFloat(document.getElementById("current-cost").innerText);
+let volume=parseFloat(document.getElementById("dispensed-volume").innerText);
+
+fetch("api/finalize_transaction.php",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+card_number:card,
+fuel_type:selectedFuel,
+volume:volume,
+cost:cost
+})
+})
+.then(r=>r.json())
+.then(data=>{
+if(data.status==="SUCCESS"){
+updateDisplay(`Transaction Completed! Remaining Balance: $${data.remaining_balance}`);
+}else{
+updateDisplay("❌ "+data.message);
+}
+})
+.catch(err=>{console.error(err);updateDisplay("❌ System Error");});
+}
+</script>
+</body>
+</html>
